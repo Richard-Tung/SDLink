@@ -1,0 +1,107 @@
+<ScrollView xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context=".AppSettingActivity" >
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+
+        <TextView
+            android:id="@+id/activity_appsetting_textpkg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="设置" />
+
+        <RadioGroup
+            android:id="@+id/activity_appsetting_rg_set"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
+
+            <RadioButton
+                android:id="@+id/activity_appsetting_set_rb1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="禁用" />
+
+            <RadioButton
+                android:id="@+id/activity_appsetting_set_rb2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="全局设置" />
+
+            <RadioButton
+                android:id="@+id/activity_appsetting_set_rb3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="独立设置" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="模式设置" />
+
+        <RadioGroup
+            android:id="@+id/activity_appsetting_rg_hooktype"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
+
+            <RadioButton
+                android:id="@+id/activity_appsetting_hooktype_rb_default"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="默认设置" />
+
+            <RadioButton
+                android:id="@+id/activity_appsetting_hooktype_rb_enhanced"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="增强模式" />
+
+            <RadioButton
+                android:id="@+id/activity_appsetting_hooktype_rb_compatibility"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="兼容模式" />
+        </RadioGroup>
+
+        <TextView
+            android:id="@+id/textView3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="独立文件夹设置" />
+
+        <EditText
+            android:id="@+id/activity_appsetting_editpath"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:hint="选择独立设置后生效 相对路径或绝对路径" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="排除目录" />
+
+        <EditText
+            android:id="@+id/activity_appsetting_editExclude"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="一行一个 相对路径 兼容模式下不起作用 设置了独立路径可能会失效"
+            android:text="" />
+    </LinearLayout>
+
+</ScrollView>

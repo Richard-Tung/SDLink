@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">SD重定向</string>
+    <string name="title_activity_per_app_setting">单程序设置</string>
+    <string name="title_activity_app_list">选择程序</string>
+    <string name="title_activity_enabled_app_list">程序设置</string>
+    <string name="title_activity_about">关于</string>
+    <string name="about">SDLink by dyq (dyq@dyq.me)\nThanks for: \n\tXInternalSD (https://github.com/pylerSM/XInternalSD/)</string>
+    <string name="title_activity_directory_select">选择文件夹</string>
+
+</resources>

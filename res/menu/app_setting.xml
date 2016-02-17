@@ -1,0 +1,19 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="me.dyq.android.SDLink.PerAppSettingActivity" >
+
+    <item
+        android:id="@+id/menu_perapp_save"
+        android:orderInCategory="100"
+        android:showAsAction="always"
+        android:title="保存" 
+        android:icon="@android:drawable/ic_menu_save"/>
+    
+    <item
+        android:id="@+id/menu_perapp_delete"
+        android:orderInCategory="100"
+        android:showAsAction="always"
+        android:title="删除"
+        android:icon="@android:drawable/ic_menu_delete"/>
+
+</menu>

@@ -1,0 +1,25 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="me.dyq.android.SDLink.MainActivity" >
+
+    <item
+        android:id="@+id/menu_main_save"
+        android:orderInCategory="100"
+        android:showAsAction="always"
+        android:title="保存"
+        android:icon="@android:drawable/ic_menu_save"/>
+    
+    <item
+        android:id="@+id/menu_main_setting"
+        android:orderInCategory="100"
+        android:showAsAction="always"
+        android:title="程序设置"
+        android:icon="@android:drawable/ic_menu_edit"/>
+    
+    <item
+        android:id="@+id/menu_main_about"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="关于..."/>
+
+</menu>
