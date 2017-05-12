@@ -44,25 +44,28 @@ public final class R {
         public static final int activity_enabled_Browse=0x7f080010;
         public static final int activity_enabled_editpkg=0x7f08000f;
         public static final int activity_enabled_list=0x7f080012;
-        public static final int activity_main_checkAutoSetting=0x7f080014;
-        public static final int activity_main_checkEnabled=0x7f080013;
-        public static final int activity_main_editSDPath=0x7f080015;
-        public static final int activity_main_hooktype_rb_compatibility=0x7f080018;
-        public static final int activity_main_hooktype_rb_enhanced=0x7f080017;
-        public static final int activity_main_hooktype_rg=0x7f080016;
-        public static final int activity_main_textSelected=0x7f080019;
-        public static final int applist_AppName=0x7f08001b;
-        public static final int applist_Icon=0x7f08001a;
-        public static final int applist_pkgname=0x7f08001c;
-        public static final int enabledapp_appname=0x7f08001e;
-        public static final int enabledapp_desc=0x7f080020;
-        public static final int enabledapp_icon=0x7f08001d;
-        public static final int enabledapp_pkgname=0x7f08001f;
-        public static final int menu_main_about=0x7f080025;
-        public static final int menu_main_save=0x7f080023;
-        public static final int menu_main_setting=0x7f080024;
-        public static final int menu_perapp_delete=0x7f080022;
-        public static final int menu_perapp_save=0x7f080021;
+        public static final int activity_main_checkAutoSetting=0x7f080017;
+        public static final int activity_main_checkEnabled=0x7f080014;
+        public static final int activity_main_checkFixSDPerm=0x7f080015;
+        public static final int activity_main_checkFixSDPerm6=0x7f080016;
+        public static final int activity_main_editSDPath=0x7f080018;
+        public static final int activity_main_hooktype_rb_compatibility=0x7f08001b;
+        public static final int activity_main_hooktype_rb_enhanced=0x7f08001a;
+        public static final int activity_main_hooktype_rg=0x7f080019;
+        public static final int activity_main_textSelected=0x7f08001c;
+        public static final int activity_main_textWarning=0x7f080013;
+        public static final int applist_AppName=0x7f08001e;
+        public static final int applist_Icon=0x7f08001d;
+        public static final int applist_pkgname=0x7f08001f;
+        public static final int enabledapp_appname=0x7f080021;
+        public static final int enabledapp_desc=0x7f080023;
+        public static final int enabledapp_icon=0x7f080020;
+        public static final int enabledapp_pkgname=0x7f080022;
+        public static final int menu_main_about=0x7f080028;
+        public static final int menu_main_save=0x7f080026;
+        public static final int menu_main_setting=0x7f080027;
+        public static final int menu_perapp_delete=0x7f080025;
+        public static final int menu_perapp_save=0x7f080024;
         public static final int textView3=0x7f08000c;
     }
     public static final class layout {
@@ -73,7 +76,8 @@ public final class R {
         public static final int activity_enabled_app_list=0x7f030004;
         public static final int activity_main=0x7f030005;
         public static final int item_app_list_layout=0x7f030006;
-        public static final int item_enabled_app_list_layout=0x7f030007;
+        public static final int item_dirselect_layout=0x7f030007;
+        public static final int item_enabled_app_list_layout=0x7f030008;
     }
     public static final class menu {
         public static final int app_setting=0x7f070000;

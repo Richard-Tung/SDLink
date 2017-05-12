@@ -7,14 +7,20 @@ import me.dyq.android.SDLink.SettingValueClass.AppValue;
 import me.dyq.android.SDLink.SettingValueClass.hookType;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
 import android.content.ComponentName;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.RadioGroup;
@@ -27,22 +33,69 @@ public class MainActivity extends Activity {
 	private AppSettingHandler apphdl;
 	private SharedPreferences sett;
 	private SharedPreferences appsett;
+	public final static int currentVersion = 1;
+	
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) 
 	{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-
 		
+		CheckBox cbfixsd6 = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm6);
+		cbfixsd6.setOnClickListener(new OnClickListener()
+		{
+
+			@Override
+			public void onClick(View v) {
+				if( ((CheckBox) v.findViewById(R.id.activity_main_checkFixSDPerm6)).isChecked() )
+				{
+					buildSDWarningDialog(v).show();
+				}
+			}
+			
+		});
+		doRefresh();
 	}
 	
-	@SuppressLint("WorldReadableFiles")
-	@SuppressWarnings("deprecation")
+	private AlertDialog.Builder buildSDWarningDialog(View v)
+	{
+		AlertDialog.Builder builder = new Builder(v.getContext());
+		builder.setTitle("警告");
+		builder.setMessage("这将允许所有手机上的App访问SD卡, 无论是否授予访问SD卡的权限\n\n" +
+				"启用6.0的SD权限修复后除非重置手机, 否则可能出现就算禁用此Xposed模块甚至删除此模块也无法禁止已安装App访问SD卡\n\n" +
+				"如果出现新安装程序无法访问SD卡, 请重启手机再试");
+		builder.setPositiveButton("确定", new DialogInterface.OnClickListener(){
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				
+			}
+
+		});
+		return builder;
+	}
+	
+	
 	@Override
 	protected void onResume()
 	{
 		super.onResume();
+		doRefresh();
+		
+	}
+	@SuppressLint("WorldReadableFiles")
+	@SuppressWarnings("deprecation")
+	private void doRefresh()
+	{
+		TextView textwarning = (TextView)this.findViewById(R.id.activity_main_textWarning);
+		if(getEnabledVersion() != currentVersion)
+		{
+			textwarning.setText("警告: 此Xposed插件未被激活 您所作的设置将无法生效");
+			textwarning.setVisibility(View.VISIBLE);
+		}
+		else textwarning.setVisibility(View.GONE);
+		
 		PackageManager pm = this.getPackageManager();
 		
 		//settings
@@ -55,6 +108,16 @@ public class MainActivity extends Activity {
 		
 		CheckBox cbenable = (CheckBox) this.findViewById(R.id.activity_main_checkEnabled);
 		cbenable.setChecked(hdl.isEnable());
+		
+		CheckBox cbfixsd = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm);
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) cbfixsd.setVisibility(View.VISIBLE);
+		else cbfixsd.setVisibility(View.GONE);
+		cbfixsd.setChecked(hdl.isFixSDPerm());
+		
+		CheckBox cbfixsd6 = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm6);
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) cbfixsd6.setVisibility(View.VISIBLE);
+		else cbfixsd6.setVisibility(View.GONE);
+		cbfixsd6.setChecked(hdl.isFixSDPerm6());
 		
 		CheckBox cbautosetting = (CheckBox) this.findViewById(R.id.activity_main_checkAutoSetting);
 		cbautosetting.setChecked(pm.getComponentEnabledSetting(new ComponentName(this,Receiver_onPackageInstall.class)) == 
@@ -73,6 +136,7 @@ public class MainActivity extends Activity {
 			sb.append(p);
 		}
 		et.setText(sb.toString());
+		
 		//Environment.getExternalStorageDirectory();
 
 		
@@ -150,14 +214,33 @@ public class MainActivity extends Activity {
 		this.hdl.setEnable(isEnable);
 		Log.i("debug", "enable="+isEnable);
 		
+		CheckBox cbfixsd = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm);
+		boolean isFixSDPerm = cbfixsd.isChecked();
+		this.hdl.setFixSDPerm(isFixSDPerm);
+		Log.i("debug", "fixsd="+isFixSDPerm);
+		
+		CheckBox cbfixsd6 = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm6);
+		boolean isFixSDPerm6 = cbfixsd6.isChecked();
+		this.hdl.setFixSDPerm6(isFixSDPerm6);
+		Log.i("debug", "fixsd="+isFixSDPerm6);
+		
 		EditText et = (EditText) this.findViewById(R.id.activity_main_editSDPath);
 		String[] pathList = et.getText().toString().replaceAll("\r", "").split("\n");
 		Set<String> set = this.hdl.getSDPath();
 		set.clear();
 		for(String s: pathList)
 		{
-			if(s != null && !s.equals("")) set.add(s);
+			String path = s;
+			while(path.endsWith("/"))
+			{
+				path = path.substring(0, path.length()-1);
+			}
+			if(path != null && !path.equals("")) 
+			{
+				set.add(path);
+			}
 		}
+		this.hdl.setSDPath(set);
 		Log.i("debug", "sdlist="+set.toString());
 		
 		RadioGroup hooktyperg = (RadioGroup) this.findViewById(R.id.activity_main_hooktype_rg);
@@ -172,6 +255,11 @@ public class MainActivity extends Activity {
 				cbautosetting.isChecked() ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED, 
 						PackageManager.DONT_KILL_APP);
 		Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show();
+	}
+	
+	public static int getEnabledVersion()
+	{
+		return 0;
 	}
 
 	

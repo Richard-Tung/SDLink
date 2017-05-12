@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="me.dyq.android.SDLink"
-    android:versionCode="10"
-    android:versionName="1.4" >
+    android:versionCode="11"
+    android:versionName="1.4.2" >
 
     <uses-sdk
-        android:minSdkVersion="16"
-        android:targetSdkVersion="21" />
+        android:minSdkVersion="15"
+        android:targetSdkVersion="23" />
 
     <application
         android:allowBackup="true"

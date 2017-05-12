@@ -1,11 +1,20 @@
 package me.dyq.android.SDLink;
 
 import java.io.File;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 
 import me.dyq.android.SDLink.SettingValueClass.AppValue;
 import me.dyq.android.SDLink.SettingValueClass.hookType;
+
+import org.xmlpull.v1.XmlPullParser;
+
+import android.annotation.TargetApi;
+import android.os.Build;
 import android.os.Environment;
+import android.util.ArrayMap;
+import android.util.Log;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XC_MethodHook;
@@ -19,14 +28,53 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 	
 	//public static final boolean DEBUG = false;
 	public static final String unChangePrefix = "__dyq_unchange_";
+	public static boolean debug = false;
+	
+	protected XSettingHandler xsett;
 
 	@Override
 	public void handleLoadPackage(LoadPackageParam lpparam) throws Throwable 
 	{
 		final String packageName=lpparam.packageName;
+		
+		if(packageName.equals("me.dyq.android.SDLink"))//自己
+		{
+			DebugLog("in self");
+			/*XC_MethodReplacement checkversion = new XC_MethodReplacement()
+			{
+
+				@Override
+				protected Object replaceHookedMethod(MethodHookParam param)
+						throws Throwable {
+					DebugLog("set enabledversion = "+MainActivity.currentVersion);
+					return MainActivity.currentVersion;
+				}
+				
+			};
+			
+			XposedHelpers.findAndHookMethod(MainActivity.class, "getEnabledVersion", checkversion);*/
+			XposedHelpers.findAndHookMethod("me.dyq.android.SDLink.MainActivity", lpparam.classLoader, "getEnabledVersion", 
+					XC_MethodReplacement.returnConstant(MainActivity.currentVersion));
+		}
+		
 		//global setting
 		XSharedPreferences settpref=new XSharedPreferences("me.dyq.android.SDLink","Setting");
 		final SettingHandler sethdl=new SettingHandler(settpref);
+		
+		if(sethdl.isFixSDPerm() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && Build.VERSION.SDK_INT < Build.VERSION_CODES.M) 
+		{
+			DebugLog("enable fixsdperm");
+			this.fixSDPermission(lpparam.packageName, lpparam.processName, lpparam.classLoader);
+		}
+		
+		if(sethdl.isFixSDPerm6() && lpparam.packageName.equals("android") && lpparam.processName.equals("android") && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		//if(sethdl.isFixSDPerm6() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		{
+			DebugLog("enable fixsdperm6");
+			this.fixSDPermission6(lpparam.packageName, lpparam.processName, lpparam.classLoader);
+		}
+		
+		
 		//perappsetting
 		XSharedPreferences appsettpref=new XSharedPreferences("me.dyq.android.SDLink","PerAppSetting");
 		AppSettingHandler appsethdl=new AppSettingHandler();
@@ -34,66 +82,405 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 		if(sethdl.isEnable())
 		{
 			//app setting
-			AppSettingModel m=appsethdl.getAppSetting(packageName);
+			AppSettingModel mSettingModel=appsethdl.getAppSetting(packageName);
 			
 			//app redirect value
-			int value = m.value;
-			int hooktype = m.hooktype;
+			int value = mSettingModel.value;
+			int hooktype = mSettingModel.hooktype;
 			if(hooktype == hookType.MODE_DEFAULT) hooktype = sethdl.getDefaultHookType();
-			Set<String> exdirs = m.ExcludeDir;
+			//Set<String> exdirs = mSettingModel.ExcludeDir;
 			
-			if(value == AppValue.GLOBAL_SETTING || value == AppValue.SELECT_PATH)
+			if(value == AppValue.GLOBAL_SETTING || value == AppValue.SELECT_PATH) //已启用
 			{
 				DebugLog("hook to app: "+packageName);
+				
+				this.xsett=new XSettingHandler();
+				xsett.exdirs.addAll(mSettingModel.ExcludeDir);//放入SD路径
 				//redirect to path
-				String topath = null;
+				this.xsett.hookPath = null;//重定向路径
 				
 				//all sd path
-				Set<String> allsdpath = sethdl.getSDPath();
+				//Set<String> allsdpath = sethdl.getSDPath();
+				this.xsett.allsdpath.addAll(sethdl.getSDPath());//所有SD路径
 				
 				if(value == AppValue.GLOBAL_SETTING)
 				{
 					//use global setting
-					topath = sethdl.getGlobalPath()+"/"+packageName;
+					this.xsett.hookPath = sethdl.getGlobalPath()+"/"+packageName;
 					
 					//make missing dirs
-					for(String presd: allsdpath)
+					for(String presd: xsett.allsdpath)
 					{
-						File hookPath = new File(fixPath(presd+"/"+topath));
-						if(!hookPath.exists()) hookPath.mkdirs();
+						File hookPath = new File(fixPath(presd+"/"+this.xsett.hookPath));
+						if(!hookPath.exists())
+						{
+							try
+							{
+							hookPath.mkdirs();
+							File nomedia = new File(hookPath,".nomedia");
+							if(!nomedia.exists()) nomedia.createNewFile();
+							} catch(Exception e) {XposedLog("[SDLink] unable to create folder for "+packageName);}
+						}
 					}
 				}
 				else if(value == AppValue.SELECT_PATH)
 				{
-					//use app setting
-					topath = m.customPath;
+					//程序独立设置
+					this.xsett.hookPath = mSettingModel.customPath;
 					
 					//make missing dir
-					File hookPath = new File(fixPath(topath));
-					if(!hookPath.exists()) hookPath.mkdirs();
+					File hookPath = new File(fixPath(this.xsett.hookPath));
+					if(!hookPath.exists()) 
+					{
+						try
+						{
+						hookPath.mkdirs();
+						File nomedia = new File(hookPath,".nomedia");
+						if(nomedia.exists())nomedia.createNewFile();
+						} catch(Exception e) {XposedLog("[SDLink] unable to create folder for "+packageName);}
+					}
 				}
+				
+				//添加Android文件夹排除
+				xsett.exdirs.add("Android/data/"+packageName);
+				xsett.exdirs.add("Android/obb/"+packageName);
 				//do hook
 				
-				if(hooktype == hookType.MODE_ENHANCED)
-				{
-					this.doEnhancedHook(packageName,lpparam.classLoader,allsdpath,topath,exdirs);
-				}
-				else if(hooktype == hookType.MODE_COMPATIBILITY)
-				{
-					this.doCompatibilityHook(packageName,lpparam.classLoader,allsdpath,topath,exdirs);
-				}
 				
+				this.doHook(packageName,hooktype,lpparam.classLoader,xsett);
 				
 			};
 				
 				//XposedHelpers.findAndHookConstructor("java.io.File", lpparam.classLoader, String.class, filehook);
 		}
 	}
+	
+	private void doHook(final String pkgname,int hooktype, ClassLoader cl, XSettingHandler xsett)
+	{
+		if(hooktype == hookType.MODE_ENHANCED)
+		{
+			this.doEnhancedHook(pkgname,cl,xsett.allsdpath, xsett.hookPath, xsett.exdirs);
+		}
+		else if(hooktype == hookType.MODE_COMPATIBILITY)
+		{
+			this.doCompatibilityHook(pkgname,cl, xsett.allsdpath, xsett.hookPath, xsett.exdirs);
+		}
+	}
+	
+	private void fixSDPermission(String packageName, String processName, ClassLoader cl)
+	{
+		if(packageName.equals("android") && processName.equals("android"))
+		{
+			XC_MethodHook fixsdperm = new XC_MethodHook() {
+				@Override
+				protected void afterHookedMethod(MethodHookParam param)
+						throws Throwable {
+					DebugLog("do fixsdperm");
+					String permission = (String) param.args[1];
+					if (permission.equals("android.permission.WRITE_EXTERNAL_STORAGE")
+							|| permission.equals("android.permission.ACCESS_ALL_EXTERNAL_STORAGE") )
+					{
+						Class<?> process = XposedHelpers.findClass("android.os.Process", null);
+						int gidsdrw = (Integer) XposedHelpers.callStaticMethod(process, "getGidForName", "sdcard_rw");
+						int gidmediarw = (Integer) XposedHelpers.callStaticMethod(process, "getGidForName", "media_rw");
+						Object permissions = null;
+						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) 
+						{
+							permissions = XposedHelpers.getObjectField(param.thisObject, "mPermissions");
+						} 
+						else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) 
+						{
+							Object settings = XposedHelpers.getObjectField(
+									param.thisObject, "mSettings");
+							permissions = XposedHelpers.getObjectField(settings,
+									"mPermissions");
+						}
+						Object bp = XposedHelpers.callMethod(permissions, "get", permission);
+						int[] bpGids = (int[]) XposedHelpers.getObjectField(bp, "gids");
+						int[] newbpGids = appendInt(appendInt(bpGids, gidsdrw),gidmediarw);
+						if(isDebugger())
+						{
+							StringBuilder sb = new StringBuilder();
+							sb.append("old gid = ");
+							for(int a:bpGids)
+							{
+								sb.append(a).append(",");
+							}
+							sb.append("\nnew gid = ");
+							for(int a:newbpGids)
+							{
+								sb.append(a).append(",");
+							}
+							DebugLog(sb.toString());
+						}
+						XposedHelpers.setObjectField(bp, "gids", newbpGids);
+					}
+				}
+			};
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+				XposedHelpers.findAndHookMethod(
+						XposedHelpers.findClass("com.android.server.SystemConfig", cl), "readPermission",
+						XmlPullParser.class, String.class,
+						fixsdperm);
+			} else if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
+				XposedHelpers.findAndHookMethod(
+						XposedHelpers.findClass("com.android.server.pm.PackageManagerService", cl), "readPermission",
+						XmlPullParser.class, String.class,
+						fixsdperm);
+			}
+		
+		
+		
+		
+		}
+		
+		
+	}
+	
+	@TargetApi(Build.VERSION_CODES.KITKAT)
+	public void fixSDPermission6(String packageName, String processName, final ClassLoader cl)
+	{
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+		{
+			//work but need improve
+			/*XC_MethodHook fixperm = new XC_MethodHook()
+			{
+				@Override
+				public void beforeHookedMethod(MethodHookParam para)
+				{
+					DebugLog("do fixsdperm6 at "+para.thisObject.toString());
+					
+					@SuppressWarnings("unchecked")
+					android.util.ArrayMap<String, Object> mPermissions = (ArrayMap<String, Object>) XposedHelpers.getObjectField(para.thisObject, "mPermissions");
+					Object bpWriteMedia = mPermissions.get(SystemValue.strWriteMedia);
+					//Object bpWriteStorage = mPermissions.get("android.permission.WRITE_EXTERNAL_STORAGE");
+					Object permState =  para.args[1];
+						if ((Integer)XposedHelpers.callMethod(permState, "grantInstallPermission", bpWriteMedia) ==
+	                            SystemValue.PERMISSION_OPERATION_FAILURE) {
+	                            DebugLog("failed, did it already have permission?");
+	                        //Slog.w(PackageManagerService.TAG, "Permission already added: " + name);
+	                    } else {
+	                    DebugLog("success, update");
+	                        XposedHelpers.callMethod(permState, "updatePermissionFlags", bpWriteMedia, SystemValue.USER_ALL,
+	                                SystemValue.MASK_PERMISSION_FLAGS, 0);
+	                    }
+					
+				}
+			};
+			XposedHelpers.findAndHookMethod("com.android.server.pm.Settings", cl, "readInstallPermissionsLPr",
+					XmlPullParser.class, XposedHelpers.findClass("com.android.server.pm.PermissionsState",cl),
+					fixperm);*/
+			XC_MethodHook fixperm = new XC_MethodHook()
+			{
+				@SuppressWarnings("unchecked")
+				@Override
+				public void beforeHookedMethod(MethodHookParam para)
+				{
+					DebugLog("do fixsdperm6 at "+para.thisObject.toString());
+					
+					Object pkg = para.args[0];
+					
+					Object mSettings = XposedHelpers.getObjectField(para.thisObject, "mSettings");
+					android.util.ArrayMap<String, Object> mPermissions = (ArrayMap<String, Object>)XposedHelpers.getObjectField(mSettings, "mPermissions");
+					
+					Object bpWriteMedia = mPermissions.get(SystemValue.strWriteMedia);
+					Object settingbase = XposedHelpers.getObjectField(pkg, "mExtras");
+					Object permState = XposedHelpers.callMethod(settingbase, "getPermissionsState", new Object[]{});
+					if(!(boolean)XposedHelpers.callMethod(permState, "hasInstallPermission", SystemValue.strWriteMedia))
+					{
+						DebugLog("no WriteMedia, fix"+para.thisObject.toString());
+						XposedHelpers.callMethod(permState, "grantInstallPermission", bpWriteMedia);
+					}
+					
+				}
+			};
+			XposedHelpers.findAndHookMethod("com.android.server.pm.PackageManagerService", cl, "grantPermissionsLPw",
+					XposedHelpers.findClass("android.content.pm.PackageParser.Package", cl), boolean.class, String.class,
+					fixperm);
+			
+			/*XC_MethodHook fixperm = new XC_MethodHook()
+			{
+				@Override
+				public void afterHookedMethod(MethodHookParam para)
+				{
+					DebugLog("do fixsdperm6 at "+para.thisObject.toString());
+					
+					String pkgname = (String) para.args[0];
+					String permname = (String) para.args[1];
+					int userId = (int)para.args[2];
+					
+					if(!(permname.equals(SystemValue.strWriteExt) || permname.equals(SystemValue.strWriteAll) ) )
+					{
+						return;
+					}
+					
+					Object mSettings = XposedHelpers.getObjectField(para.thisObject, "mSettings");
+					
+					@SuppressWarnings("unchecked")
+					android.util.ArrayMap<String, Object> mPermissions = (ArrayMap<String, Object>) XposedHelpers.getObjectField(mSettings, "mPermissions");
+					
+					Object bpWriteMedia = mPermissions.get(SystemValue.strWriteMedia);
+					if(bpWriteMedia == null)
+					{
+						DebugLog("Error: bpWriteMedia is null");
+						return;
+					}
+					
+					@SuppressWarnings("unchecked")
+					ArrayMap<String, Object> mPackage = (ArrayMap<String, Object>) XposedHelpers.getObjectField(para.thisObject, "mPackages");
+					synchronized(mPackage)
+					{
+						final Object pkg = mPackage.get(pkgname);
+						if(pkg == null) 
+						{
+							DebugLog("no package "+pkgname);
+							return;
+						}
+						Object settingbase = XposedHelpers.getObjectField(pkg, "mExtras");
+						if(settingbase == null)
+						{
+							DebugLog("no package "+pkgname);
+							return;
+						}
+						Object permState = XposedHelpers.callMethod(settingbase, "getPermissionsState", new Object[]{});
+						
+						if ((Integer)XposedHelpers.callMethod(permState, "grantInstallPermission", bpWriteMedia) ==
+	                            SystemValue.PERMISSION_OPERATION_FAILURE) {
+							DebugLog("failed, did it already have permission?");
+	                        //Slog.w(PackageManagerService.TAG, "Permission already added: " + name);
+	                    } else {
+	                    	DebugLog("success, update");
+	                        XposedHelpers.callMethod(permState, "updatePermissionFlags", bpWriteMedia, SystemValue.USER_ALL,
+	                                SystemValue.MASK_PERMISSION_FLAGS, 0);
+	                    }
+					}
+					
+					//Object bpWriteStorage = mPermissions.get("android.permission.WRITE_EXTERNAL_STORAGE");
+						
+					
+				}
+			};
+			XposedHelpers.findAndHookMethod("com.android.server.pm.PackageManagerService", cl, "grantRuntimePermission",
+					String.class,String.class,int.class,
+					fixperm);
+			*/
+			//dead
+			/*
+			XC_MethodHook hookPackageManagerService = new XC_MethodHook()
+			{
+				@Override 
+				public void afterHookedMethod(MethodHookParam para)
+				{
+					Object mSettings = XposedHelpers.getObjectField(para.thisObject, "mSettings");
+					Object mPermissions = XposedHelpers.getObjectField(mSettings, "mPermissions");
+					XposedHelpers.setStaticObjectField(para.thisObject.getClass(), "mPermissionsStatic", mPermissions);
+				}
+			};
+			XposedHelpers.findAndHookConstructor("com.android.server.pm.PackageManagerService", cl,
+					Context.class, XposedHelpers.findClass("com.android.server.pm.Installer", cl), boolean.class, boolean.class,
+					hookPackageManagerService);
+			
+			XC_MethodHook hookpermstate = new XC_MethodHook()
+			{
+				@Override
+				public void afterHookedMethod(MethodHookParam para)
+				{
+					
+					@SuppressWarnings("unchecked")
+					android.util.ArrayMap<String, Object> mPermissions = (ArrayMap<String, Object>) XposedHelpers.getStaticObjectField(XposedHelpers.findClass("com.android.server.pm.PackageManagerService", cl), "mPermissionsStatic");
+					//@SuppressWarnings("unchecked")
+					//android.util.ArrayMap<String, Object> mPermissions = (ArrayMap<String, Object>) XposedHelpers.getObjectField(para.thisObject, "mPermissions");
+					Object bpWriteMedia = mPermissions.get(SystemValue.strWriteMedia);
+					//Object bpWriteExt = mPermissions.get(strWriteExt);
+					//Object bpWriteAll = mPermissions.get(strWriteAll);
+					
+					DebugLog("do fixsdperm6 at "+para.thisObject.toString());
+					Object argbp = para.args[0];
+					String argpermname = (String) XposedHelpers.getObjectField(argbp, "name");
+					int userId = (int) para.args[1];
+					
+					
+					if(argpermname.equals(SystemValue.strWriteExt) || argpermname.equals(SystemValue.strWriteAll))
+					{
+						DebugLog("at WriteExt or WriteAll, do fix");
+						//Method methodGrantPermission = XposedHelpers.findMethodBestMatch(para.thisObject.getClass(), "grantPermission", classbp, int.class);
+						//int result = (int)XposedHelpers.callMethod(para.thisObject, "grantInstallPermission", bpWriteMedia);
+						//int result = (int)methodGrantPermission.invoke(para.thisObject, bpWriteMedia, userId);
+						int result = (int)XposedHelpers.callMethod(para.thisObject, "grantInstallPermission", bpWriteMedia);
+						if(result == SystemValue.PERMISSION_OPERATION_FAILURE)
+						{
+							DebugLog("failed, did it already have permission?");
+						}
+						else
+						{
+							DebugLog("success, update");
+							XposedHelpers.callMethod(para.thisObject, "updatePermissionFlags", 
+									bpWriteMedia, userId, SystemValue.MASK_PERMISSION_FLAGS, 0);
+						}
+					}
+					
+				}
+			};
+			XposedHelpers.findAndHookMethod("com.android.server.pm.PermissionsState", cl, "grantPermission",
+					XposedHelpers.findClass("com.android.server.pm.BasePermission", cl), int.class, 
+					hookpermstate);*/
+			
+			/*
+			XC_MethodHook fixperm = new XC_MethodHook(){
+				@Override
+				public void beforeHookedMethod(MethodHookParam para)
+				{
+					DebugLog("do fixsdperm6 at "+para.thisObject.toString());
+					String[] perms = (String[])para.args[2];
+					int flag = 0;
+					for(String perm: perms)
+					{
+						if(perm.equals(SystemValue.strWriteExt) || perm.equals(SystemValue.strWriteAll) && flag != 2)
+							flag = 1;
+						if(perm.equals(SystemValue.strWriteMedia)) flag = 2;
+					}
+					if(flag == 1)
+					{
+						DebugLog("at WriteExt or WriteAll, do fix");
+						String[] newperms = new String[perms.length+1];
+						for(int i=0;i<perms.length;i++)
+						{
+							newperms[i] = perms[i];
+						}
+						newperms[newperms.length-1] = SystemValue.strWriteMedia;
+						para.args[2] = newperms;
+						DebugLog("now permissions="+newperms.toString());
+						return;
+					}
+				}
+			};
+			XposedHelpers.findAndHookMethod("com.android.server.pm.PackageManagerService", cl, 
+					"grantRequestedRuntimePermissions", 
+					XposedHelpers.findClass("android.content.pm.PackageParser.Package", cl), int.class, String[].class,
+					fixperm);*/
+		}
+	}
+	
+	public static int[] appendInt(int[] cur, int val) {
+		if (cur == null) {
+			return new int[] { val };
+		}
+		final int N = cur.length;
+		for (int i = 0; i < N; i++) {
+			if (cur[i] == val) {
+				return cur;
+			}
+		}
+		int[] ret = new int[N + 1];
+		System.arraycopy(cur, 0, ret, 0, N);
+		ret[N] = val;
+		return ret;
+	}
 
 	@Override
 	public void initZygote(StartupParam startupParam) throws Throwable 
 	{
-		// TODO Auto-generated method stub
+		// 
 		
 	}
 	
@@ -175,6 +562,7 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 			{
 				DebugLog("in CompatibilityHook");
 				File f = (File)param.getResult();
+				if(f == null) return;
 				String newpath = ReplacePath(f.getAbsolutePath(),allsdpath,exdirs,topath);
 				if(newpath != null) param.setResult(new File(newpath));
 			}
@@ -203,18 +591,29 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 					//File f = cutHookedPath((File) param.args[0], rPath);
 					//param.args[0] = cutHookedPath(f,rPath);
 					//old
-					if(oldf.exists())
+					if(!oldf.exists())
 					{
-						if(oldf.canRead())
+						try
 						{
-							if(oldf.canWrite())
-							{
-								return Environment.MEDIA_MOUNTED;
-							}
-							else
-							{
-								return Environment.MEDIA_MOUNTED_READ_ONLY;
-							}
+							oldf.mkdirs();
+							if(!oldf.exists()) return Environment.MEDIA_REMOVED;
+						}
+						catch(Exception e)
+						{
+							XposedBridge.log(e);
+							return Environment.MEDIA_REMOVED;
+						}
+					}
+					
+					if(oldf.canRead())
+					{
+						if(oldf.canWrite())
+						{
+							return Environment.MEDIA_MOUNTED;
+						}
+						else
+						{
+							return Environment.MEDIA_MOUNTED_READ_ONLY;
 						}
 					}
 					return Environment.MEDIA_REMOVED;
@@ -242,7 +641,10 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 			}
 		};
 		XposedHelpers.findAndHookMethod("android.os.Environment", cl, "getStorageState", File.class, fixstorage);
-		XposedHelpers.findAndHookMethod("android.os.Environment", cl, "getExternalStorageState", File.class, fixstorage);
+		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)//5.0 and above
+		{
+			XposedHelpers.findAndHookMethod("android.os.Environment", cl, "getExternalStorageState", File.class, fixstorage);
+		}
 		
 		
 	}
@@ -284,7 +686,7 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 		if(hookPath.startsWith("/"))//absolute path
 		{
 			//if path include redirect path then return
-			if(oldPath.startsWith(hookPath)) return null;
+			if(oldPath.toLowerCase(Locale.US).startsWith(hookPath.toLowerCase(Locale.US))) return null;
 			//if path is android default sd path then return
 			//if(oldPath.startsWith(fixPath(sdPath+"/Android/data/"+pkgname))) return null;
 			
@@ -296,7 +698,7 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 		else//else
 		{
 			//if path include redirect path then return
-			if(oldPath.startsWith(fixPath(sdPath+"/"+hookPath))) return null;
+			if(oldPath.toLowerCase(Locale.US).startsWith(fixPath(sdPath+"/"+hookPath.toLowerCase(Locale.US)))) return null;
 			//if path is android default sd path then return
 			//if(oldPath.startsWith(fixPath(sdPath+"/Android/data/"+pkgname))) return null;
 			
@@ -312,6 +714,7 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 	private static String ReplacePath(String oldpath, Set<String> allsdpath, Set<String> exdirs, String topath)
 	//null = stock path
 	{
+		if(oldpath == null) return null;
 		if(oldpath.startsWith(unChangePrefix))//find unchange prefix
 		{
 			String newpath = oldpath.substring(unChangePrefix.length(), oldpath.length());
@@ -379,15 +782,53 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 		return newpath;
 	}
 	
+	@SuppressWarnings("unused")
+	private static final class SystemValue
+	{
+	    /** The permission operation failed. */
+	    public static final int PERMISSION_OPERATION_FAILURE = -1;
+
+	    /** The permission operation succeeded and no gids changed. */
+		public static final int PERMISSION_OPERATION_SUCCESS = 0;
+
+	    /** The permission operation succeeded and gids changed. */
+	    public static final int PERMISSION_OPERATION_SUCCESS_GIDS_CHANGED = 1;
+	    
+	    public static final int MASK_PERMISSION_FLAGS = 0xFF;
+	    
+	    public static final int USER_OWNER = 0;
+	    
+	    public static final int USER_ALL = -1;
+	    
+	    public static final int USER_CURRENT = -2;
+	    
+	    public static final String strWriteMedia = "android.permission.WRITE_MEDIA_STORAGE";
+	    public static final String strWriteExt = "android.permission.WRITE_EXTERNAL_STORAGE";
+	    public static final String strWriteAll = "android.permission.ACCESS_ALL_EXTERNAL_STORAGE";
+	}
+	
 	private static void DebugLog(String log)
 	{
-		if(isDebugger()) XposedBridge.log(log);
+		//if(isDebugger()) XposedBridge.log(log);
+		if(isDebugger()) Log.v("Xposed", log);
+	}
+	
+	private static void XposedLog(String log)
+	{
+		XposedBridge.log(log);
 	}
 	
 	private static boolean isDebugger()//debug on/off
 	{
-		return false;
+		return debug;
 	}
 		
+	private class XSettingHandler
+	{
+		
+		public Set<String> allsdpath=new HashSet<String>();
+		public Set<String> exdirs=new HashSet<String>();
+		public String hookPath;
+	}
 
 }
