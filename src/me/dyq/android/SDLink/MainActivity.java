@@ -110,7 +110,7 @@ public class MainActivity extends Activity {
 		cbenable.setChecked(hdl.isEnable());
 		
 		CheckBox cbdebug = (CheckBox) this.findViewById(R.id.activity_main_checkDebug);
-		cbenable.setChecked(hdl.isDebugger());
+		cbdebug.setChecked(hdl.isDebugger());
 		
 		CheckBox cbfixsd = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm);
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) cbfixsd.setVisibility(View.VISIBLE);
