@@ -5,7 +5,6 @@ SD重定向是个Xposed插件
 重定向状态下排除指定目录(如相册等), 方便使用
 警告: 请勿对系统程序设置 可能会产生未知后果
 
-链接: http://pan.baidu.com/s/1i3KpkPZ 密码: mnr3
 
 1.4.2
 BugFix
