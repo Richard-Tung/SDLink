@@ -21,6 +21,7 @@ public class SettingHandler {
 		Log.i(tag, "do Constructor");
 		this.sett = sett;
 		this.isEnable = sett.getBoolean("enable", false);
+		this.isDebug = sett.getBoolean("debuglog", false);
 		this.fixsdperm = sett.getBoolean("fixsdperm", false);
 		this.fixsdperm6 = sett.getBoolean("fixsdperm6", false);
 		this.setGlobalPath = sett.getString("global_path", "AppFile");
@@ -38,6 +39,7 @@ public class SettingHandler {
 	}
 	
 	private boolean isEnable = false;
+	private boolean isDebug = false;
 	private int defaultHookType = hookType.MODE_ENHANCED;
 	private String setGlobalPath;
 	private Set<String> sdpath;
@@ -52,6 +54,16 @@ public class SettingHandler {
 	public boolean isEnable()
 	{
 		return this.isEnable;
+	}
+	
+	public boolean isDebugger()
+	{
+		return this.isDebug;
+	}
+	
+	public void setDebug(boolean value)
+	{
+		this.isDebug = value;
 	}
 	
 	public int getDefaultHookType()
@@ -110,6 +122,7 @@ public class SettingHandler {
 		SharedPreferences.Editor editor = this.sett.edit();
 		editor.clear();
 		editor.putBoolean("enable", this.isEnable);
+		editor.putBoolean("debuglog", this.isDebug);
 		editor.putBoolean("fixsdperm", this.fixsdperm);
 		editor.putBoolean("fixsdperm6", this.fixsdperm6);
 		editor.putString("global_path", this.getGlobalPath());

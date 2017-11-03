@@ -586,6 +586,13 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 			{
 				DebugLog("in android.os.Environment.getStorageState");
 				File oldf = (File) param.args[0];
+				DebugLog("File=" + oldf != null ? oldf.getAbsolutePath() : "null");
+				
+				if(oldf == null || oldf.getAbsolutePath().equals(""))
+				{
+					DebugLogAlways("getExternalStorageState("+oldf.getAbsolutePath()+")=null,MEDIA_MOUNTED");
+					return Environment.MEDIA_MOUNTED;
+				}
 				//if(oldf.getAbsolutePath().contains(rPath))
 				//{
 					//File f = cutHookedPath((File) param.args[0], rPath);
@@ -596,11 +603,16 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 						try
 						{
 							oldf.mkdirs();
-							if(!oldf.exists()) return Environment.MEDIA_REMOVED;
+							if(!oldf.exists()) 
+							{
+								DebugLogAlways("getExternalStorageState("+oldf.getAbsolutePath()+")=CreateFailed,MEDIA_REMOVED");
+								return Environment.MEDIA_REMOVED;
+							}
 						}
 						catch(Exception e)
 						{
 							XposedBridge.log(e);
+							DebugLogAlways("getExternalStorageState("+oldf.getAbsolutePath()+")=Exception,MEDIA_REMOVED");
 							return Environment.MEDIA_REMOVED;
 						}
 					}
@@ -609,13 +621,16 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 					{
 						if(oldf.canWrite())
 						{
+							DebugLogAlways("getExternalStorageState("+oldf.getAbsolutePath()+")=RW,MEDIA_MOUNTED");
 							return Environment.MEDIA_MOUNTED;
 						}
 						else
 						{
+							DebugLogAlways("getExternalStorageState("+oldf.getAbsolutePath()+")=RO,MEDIA_MOUNTED_READ_ONLY");
 							return Environment.MEDIA_MOUNTED_READ_ONLY;
 						}
 					}
+					DebugLogAlways("getExternalStorageState("+oldf.getAbsolutePath()+")=NotExist,MEDIA_REMOVED");
 					return Environment.MEDIA_REMOVED;
 					
 					/*if(oldf.exists())
@@ -681,7 +696,7 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 	
 	private static String getNewPath(String oldPath, String sdPath, String hookPath)
 	{
-		DebugLog("old path="+oldPath);
+		DebugLog("old path="+oldPath+",sdpath="+sdPath+",hookPath="+hookPath);
 		String hookedPath;
 		if(hookPath.startsWith("/"))//absolute path
 		{
@@ -810,7 +825,12 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 	private static void DebugLog(String log)
 	{
 		//if(isDebugger()) XposedBridge.log(log);
-		if(isDebugger()) Log.v("Xposed", log);
+		if(isDebugger()) Log.v("Xposed.SDLink", log);
+	}
+	
+	private static void DebugLogAlways(String log)
+	{
+		Log.v("Xposed.SDLink", log);
 	}
 	
 	private static void XposedLog(String log)

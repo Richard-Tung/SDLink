@@ -109,6 +109,9 @@ public class MainActivity extends Activity {
 		CheckBox cbenable = (CheckBox) this.findViewById(R.id.activity_main_checkEnabled);
 		cbenable.setChecked(hdl.isEnable());
 		
+		CheckBox cbdebug = (CheckBox) this.findViewById(R.id.activity_main_checkDebug);
+		cbenable.setChecked(hdl.isDebugger());
+		
 		CheckBox cbfixsd = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm);
 		if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) cbfixsd.setVisibility(View.VISIBLE);
 		else cbfixsd.setVisibility(View.GONE);
@@ -213,6 +216,11 @@ public class MainActivity extends Activity {
 		boolean isEnable = cb.isChecked();
 		this.hdl.setEnable(isEnable);
 		Log.i("debug", "enable="+isEnable);
+		
+		CheckBox cbdebug = (CheckBox) this.findViewById(R.id.activity_main_checkDebug);
+		boolean isDebug = cbdebug.isChecked();
+		this.hdl.setDebug(isDebug);
+		Log.i("debug", "debug="+isDebug);
 		
 		CheckBox cbfixsd = (CheckBox) this.findViewById(R.id.activity_main_checkFixSDPerm);
 		boolean isFixSDPerm = cbfixsd.isChecked();
