@@ -715,7 +715,7 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 		else//else
 		{
 			//if path include redirect path then return
-			if(oldPath.toLowerCase(Locale.US).startsWith(fixPath(sdPath+"/"+hookPath.toLowerCase(Locale.US)))) return null;
+			if(oldPath.toLowerCase(Locale.US).startsWith(fixPath(sdPath+"/"+hookPath).toLowerCase(Locale.US))) return null;
 			//if path is android default sd path then return
 			//if(oldPath.startsWith(fixPath(sdPath+"/Android/data/"+pkgname))) return null;
 			
