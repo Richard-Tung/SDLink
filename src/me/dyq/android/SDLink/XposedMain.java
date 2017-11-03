@@ -94,6 +94,8 @@ public class XposedMain implements IXposedHookZygoteInit,IXposedHookLoadPackage 
 			{
 				DebugLog("hook to app: "+packageName);
 				
+				debug = sethdl.isDebugger();
+				
 				this.xsett=new XSettingHandler();
 				xsett.exdirs.addAll(mSettingModel.ExcludeDir);//∑≈»ÎSD¬∑æ∂
 				//redirect to path
